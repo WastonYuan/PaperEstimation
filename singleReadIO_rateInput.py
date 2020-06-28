@@ -21,14 +21,14 @@ def make_random_list(data_range, data_size):
 
 
 if __name__ == "__main__":
-    data_range = 1000 # key range 按照随机分配
+    data_range = 100 # key range 按照随机分配
     block_cache_size = 50 # lru缓存大小
-    write_size = 1000 # 输入的key总数
+    write_size = 10000 # 输入的key总数
     key_per_block = 10 # 一个block的key总数
-    block_per_sst = 5 # 一个sst的block数
-    lookupkeys_size = 1 # lookupkey的大小 ** 调节几个图
-    mem_size = 15   
-    read_size = 50 # 读取的key数
+    block_per_sst = 5 # 一个sst的block数 sst 的key数要比mem_size大
+    lookupkeys_size = 1   # lookupkey的大小 ** 调节几个图
+    mem_size = 15   # memtable 一定要比一个sst大 要么一个sst只会有一个block
+    read_size = 3 # 读取的key数
     
     # 应该是先加载block_index(顺序查找 那应该是在他后面就可以减少一次io，但是block index本来就在缓存) 先看看是不是顺序查找
     # block_cache 不仅仅会缓存data_block index_block也是会缓存的
@@ -99,16 +99,19 @@ if __name__ == "__main__":
     o_data_block_io = 0
     lookupkey_list = []
     cur_key = 0 # current read key
-    while lookupkey_list.__len__() < lookupkeys_size and cur_key < read_size:
-        lookupkey_list.append([read_keys_list[cur_key], -1, False]) # every element means (key, last_search_sst, is_find)
-        cur_key = cur_key + 1
-    while lookupkey_list.__len__() != 0:
-            # begin a sst search
-
+    
+    while cur_key < read_size:
+        # add key to lookupkey_size
+        add = lookupkeys_size - lookupkey_list.__len__()
+        for i in range(add):
+            if lookupkey_list.__len__() < lookupkeys_size and cur_key < read_size:
+                lookupkey_list.append([read_keys_list[cur_key], -1, False]) # every element means (key, last_search_sst, is_find)
+                cur_key = cur_key + 1
+        # begin a sst search
+        if lookupkey_list.__len__() != 0:
             print 'lookup_list:' + str(lookupkey_list)
             cur_sst_id = lookupkey_list[0][1] + 1
             print 'search sst:' + str(cur_sst_id), 'all sst num:' + str(sst_list.__len__())
-            
             cur_sst = sst_list[cur_sst_id] # begin search from first lookupkey_list ele
             for lookupkey in lookupkey_list: # change all last lookupkey point to next sst
                 if lookupkey[1] + 1 == cur_sst_id: # every block check all lookupkey
@@ -131,7 +134,6 @@ if __name__ == "__main__":
                                 print '    find ' + str(key) + 'in ' + str(block)
                                 lookupkey[2] = True
             lookupkey_list = [s for s in lookupkey_list if s[2] == False]
-
             if cur_sst_id == sst_list.__len__() - 1: # del the cannot find lookupkey
                 remove_lookupkey = []
                 for lookupkey in lookupkey_list:
@@ -139,17 +141,14 @@ if __name__ == "__main__":
                         remove_lookupkey.append(lookupkey)
                 for r in remove_lookupkey:
                     lookupkey_list.remove(r)
-            while lookupkey_list.__len__() < lookupkeys_size and cur_key < read_size:
-                lookupkey_list.append([read_keys_list[cur_key], -1, False]) # every element means (key, last_search_sst)
-                cur_key = cur_key + 1
-
+    
     origin_all = index_block_io + data_block_io
     optimize_all = o_index_block_io + o_data_block_io
     print "origin_io index:" + str(index_block_io) + " data:" + str(data_block_io) + " all:" + str(origin_all)
     print "optimization_io index:" + str(o_index_block_io) + " data:" + str(o_data_block_io) + " all:" + str(optimize_all)
     print "optimize rate:" + str((float(origin_all - optimize_all) / float(origin_all)))
 
-    
+
 
 
 
