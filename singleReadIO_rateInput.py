@@ -26,9 +26,11 @@ if __name__ == "__main__":
     write_size = 10000 # 输入的key总数
     key_per_block = 10 # 一个block的key总数
     block_per_sst = 5 # 一个sst的block数 sst 的key数要比mem_size大
-    lookupkeys_size = 1   # lookupkey的大小 ** 调节几个图
+    lookupkeys_size = 3   # lookupkey的大小 ** 调节几个图
     mem_size = 15   # memtable 一定要比一个sst大 要么一个sst只会有一个block
+    input_rate = 0.01 # 每次读取完一个sst后 这个从0.1 - 1画个图能代表读密度与速率变化
     read_size = 3 # 读取的key数
+    max_per_sst_read_input = 3
     
     # 应该是先加载block_index(顺序查找 那应该是在他后面就可以减少一次io，但是block index本来就在缓存) 先看看是不是顺序查找
     # block_cache 不仅仅会缓存data_block index_block也是会缓存的
@@ -100,11 +102,10 @@ if __name__ == "__main__":
     lookupkey_list = []
     cur_key = 0 # current read key
     
-    while cur_key < read_size:
+    while cur_key < read_size or lookupkey_list.__len__() != 0:
         # add key to lookupkey_size
-        add = lookupkeys_size - lookupkey_list.__len__()
-        for i in range(add):
-            if lookupkey_list.__len__() < lookupkeys_size and cur_key < read_size:
+        for i in range(max_per_sst_read_input):
+            if lookupkey_list.__len__() < lookupkeys_size and cur_key < read_size and random.random() < input_rate:
                 lookupkey_list.append([read_keys_list[cur_key], -1, False]) # every element means (key, last_search_sst, is_find)
                 cur_key = cur_key + 1
         # begin a sst search

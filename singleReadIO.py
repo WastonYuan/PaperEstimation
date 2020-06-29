@@ -28,7 +28,7 @@ if __name__ == "__main__":
     block_per_sst = 5 # 一个sst的block数
     lookupkeys_size = 1 # lookupkey的大小 ** 调节几个图
     mem_size = 15   
-    read_size = 50 # 读取的key数
+    read_size = 3 # 读取的key数
     
     # 应该是先加载block_index(顺序查找 那应该是在他后面就可以减少一次io，但是block index本来就在缓存) 先看看是不是顺序查找
     # block_cache 不仅仅会缓存data_block index_block也是会缓存的
@@ -102,6 +102,7 @@ if __name__ == "__main__":
     while lookupkey_list.__len__() < lookupkeys_size and cur_key < read_size:
         lookupkey_list.append([read_keys_list[cur_key], -1, False]) # every element means (key, last_search_sst, is_find)
         cur_key = cur_key + 1
+    # while cur_key != read_keys_list.__len__():
     while lookupkey_list.__len__() != 0:
             # begin a sst search
 
